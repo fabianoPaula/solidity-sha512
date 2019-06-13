@@ -1,0 +1,23 @@
+{
+  "name": "sha2_512",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "contracts:build": "waffle .waffle.js",
+    "contracts:test": "NODE_ENV=test mocha --recursive --require babel-register test -t 10000",
+    "contracts:build:test": "yarn contracts:build && yarn contracts:test"
+  },
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-stage-0": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "chai": "^4.2.0",
+    "crypto-js": "^3.1.9-1",
+    "ethereum-waffle": "^2.0.12",
+    "mocha": "^6.1.4",
+    "babel-plugin-transform-runtime": "^6.23.0"
+  }
+}
