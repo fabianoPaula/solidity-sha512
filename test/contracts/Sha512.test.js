@@ -28,10 +28,10 @@ describe('Sha512 contracts test', async () => {
       expect(contract.preprocess).to.be.an('function');
     });
 
-    it("expect to return preprocessed 'hello world'", async () => {
+    it("expect to return preprocessed 'helloworld'", async () => {
       expect(
-        await contract.preprocess("0x48656c6c6f20576f726c64")
-      ).to.be.eq("0x90cad8d8de40aedee4d8c90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b");
+        await contract.preprocess("0x68656c6c6f20576f726c64")
+      ).to.be.eq("0x68656c6c6f20776f726c64800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000058");
     });
 
   });
@@ -142,15 +142,24 @@ describe('Sha512 contracts test', async () => {
     it("expect to hash has 64bits(512 bits)", async () => {
       let result = await contract.digest("0x48656c6c6f20576f726c64");
       expect(
-        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "0x").length
-      ).to.be.eq(130); // 128 char in hexadecimal + '0x'
+        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "" ).length
+      ).to.be.eq(128); // 128 char in hexadecimal
     });
 
     it("expect to return digest 'hello world'", async () => {
-      let result = await contract.digest("0x48656c6c6f20576f726c64");
+      let result = await contract.digest("0x68656c6c6f20576f726c64");
+      // console.log(result);
+      // console.log(result.map( e => e._hex));
+      // console.log(result[0].toString())
+      // console.log(470158622848058750);
+      // console.log(470158622848058750 - parseInt(result[0].toString()));
+      let result_expected = CryptoJS.SHA512('hello world').toString(CryptoJS.enc.Hex);
+      // console.log(result_expected);
+
       expect(
-        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "0x")
-      ).to.be.eq("0x309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f");
+        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "")
+      ).to.be.eq(result_expected);
+      expect(true).to.be.eq(false);
     });
 
   });

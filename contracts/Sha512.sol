@@ -33,62 +33,37 @@ contract Sha512 {
 		// returns(uint)
 		returns(bytes memory)
 	{
-		bytes memory result = new bytes(message.length);
+		uint bitSize = message.length*8;
+		uint padding = 120 - (message.length % 128);
+		bytes memory result = new bytes(message.length + padding + 8);
 
 		for(uint i = 0; i < message.length; i++){
-			result[i] = message[i] << 1;
+			result[i] = message[i];
 		}
+		result[message.length] = 0x80;
+		result[result.length - 2] = bytes1(uint8(bitSize / 0x80));
+		result[result.length - 1] = bytes1(uint8(bitSize));
 
-		result[result.length - 1] = result[result.length - 1] | 0x01;
-
-		uint zeroPadding = 960 - (bytesLength(result) % 512);
-		uint number_of_bytes  = zeroPadding / 8;
-		uint number_of_shifts = zeroPadding % 8;
-
-		if (number_of_shifts > 0){
-			number_of_bytes += 1;
-		}
-
-		bytes memory resultWithZeros = new bytes(result.length + number_of_bytes);
-		for(uint i = 0; i < result.length; i++){
-			resultWithZeros[i] = result[i];
-		}
-
-		bytes memory resultWithSize = new bytes(resultWithZeros.length + 8);
-		for(uint i = 0; i < resultWithZeros.length; i++){
-			resultWithSize[i] = resultWithZeros[i];
-		}
-
-		uint messageLength = message.length;
-
-		resultWithSize[resultWithSize.length - 8] = bytes1(uint8(messageLength >> 8**7));
-		resultWithSize[resultWithSize.length - 7] = bytes1(uint8(messageLength >> 8**6));
-		resultWithSize[resultWithSize.length - 6] = bytes1(uint8(messageLength >> 8**5));
-		resultWithSize[resultWithSize.length - 5] = bytes1(uint8(messageLength >> 8**4));
-		resultWithSize[resultWithSize.length - 4] = bytes1(uint8(messageLength >> 8**3));
-		resultWithSize[resultWithSize.length - 3] = bytes1(uint8(messageLength >> 8**2));
-		resultWithSize[resultWithSize.length - 2] = bytes1(uint8(messageLength >> 8));
-		resultWithSize[resultWithSize.length - 1] = bytes1(uint8(messageLength));
-
-		return resultWithSize;
-		// return bytesLength(resultWithSize);
-		// return bytesLength(resultWithSize) % 512;
+		return result;
 	}	
 
-	function bytesToUint64(bytes memory data, uint begin) public pure returns (uint64){
+	function bytesToInt64(uint _offst, bytes memory _input) public pure returns (uint64) {
         uint number = 0;
         for(uint i = 0; i < 8; i++){
-        	number += uint(uint8(data[begin + i])) * 8**(7 - i);
+        	number += uint(uint8(_input[_offst + i])) * 2**(8*(7 - i));
         }
         return uint64(number);
     }
 
-	function getBlock(bytes memory data, uint number) public pure returns(uint64[16] memory)
+	function get1024Block(bytes memory data, uint number) 
+		public 
+		pure 
+		returns(uint64[16] memory)
 	{
 		uint64[16] memory response;
 		uint blockNumber = 128*number;
 		for(uint i = 0; i < 16; i++){
-			response[i] = bytesToUint64(data, blockNumber + 8*i);	
+			response[i] = bytesToInt64(blockNumber + 8*i, data);	
 		}
 		return response;
 	}
@@ -106,23 +81,22 @@ contract Sha512 {
 	function digest(bytes memory data) 
 		public 
 		pure 
+		// returns(bytes memory)
 		returns(uint64[8] memory)
+		// returns(uint64[16] memory)
 	{
-		bytes memory blocks = preprocess(data);
 		
 		uint64[8]  memory h;
 		uint64[80] memory k;
 		uint64[8]  memory funcVar; // Funcional Vars
 
-		uint64 s0;
-		uint64 s1;
-		uint64 ch;
-		uint64 maj;
+		uint64[2] memory sigma;
+		uint64[2] memory gamma;
 		uint64 temp1;
 		uint64 temp2;
+		uint64 ch;
+		uint64 maj;
 
-		// uint number_of_blocks = blocks.length/64;
-		uint64[16] memory dataBlocks = getBlock(blocks, 0);
 		uint64[80] memory w;
 
 		h[0] = 0x6A09E667F3BCC908;
@@ -215,51 +189,58 @@ contract Sha512 {
 		k[78] = 0x5fcb6fab3ad6faec;
 		k[79] = 0x6c44198c4a475817;
 
-		funcVar[0] = h[0];
-    	funcVar[1] = h[1];
-    	funcVar[2] = h[2];
-    	funcVar[3] = h[3];
-    	funcVar[4] = h[4];
-    	funcVar[5] = h[5];
-    	funcVar[6] = h[6];
-    	funcVar[7] = h[7];
+		bytes memory blocks = preprocess(data);
+		
+		for(uint j = 0; j < blocks.length/128; j++){
+			uint64[16] memory dataBlocks = get1024Block(blocks, 0);
 
-		for(uint i = 0; i < 16; i++){
-			w[i] = dataBlocks[i];
+			funcVar[0] = h[0];
+	    	funcVar[1] = h[1];
+	    	funcVar[2] = h[2];
+	    	funcVar[3] = h[3];
+	    	funcVar[4] = h[4];
+	    	funcVar[5] = h[5];
+	    	funcVar[6] = h[6];
+	    	funcVar[7] = h[7];
+
+			for(uint i = 0; i < 80; i++){
+				if( i < 16 ){
+					w[i] = dataBlocks[i];
+				} else {
+					gamma[0] = rotateR(w[i-15],1) ^ rotateR(w[i-15],8) ^ rotateR(w[i-15],7);
+		        	gamma[1] = rotateR(w[i-2],19) ^ rotateL(w[i-2 ],61) ^ rotateR(w[i-2],6);
+		        	w[i] = gamma[0] + w[i-7] + gamma[1] + w[i-16];	
+				}
+
+				// Does need to remenber that solidity doesn't have a support for bitwise not
+				ch = (funcVar[4] & funcVar[5]) ^ ((funcVar[4] ^ 0xffffffffffffffff) ^ funcVar[6]);
+				maj = (funcVar[0] & funcVar[1]) ^ (funcVar[0] & funcVar[2]) ^ (funcVar[1] & funcVar[2]);
+
+				sigma[0] = rotateR(funcVar[0],28) ^ rotateL(funcVar[0],30) ^ rotateL(funcVar[0],25);
+				sigma[1] = rotateR(funcVar[4],14) ^ rotateR(funcVar[4],18) ^ rotateL(funcVar[4],23);
+		        
+		        temp1 = funcVar[7] + sigma[1] + ch + k[i] + w[i];
+		        temp2 = sigma[0] + maj;
+
+		        funcVar[7] = funcVar[6];
+		        funcVar[6] = funcVar[5];
+		        funcVar[5] = funcVar[4];
+		        funcVar[4] = funcVar[3] + temp1;
+		        funcVar[3] = funcVar[2];
+		        funcVar[2] = funcVar[1];
+		        funcVar[1] = funcVar[0];
+		        funcVar[0] = temp1 + temp2;
+			}
+
+	    	h[0] = h[0] + funcVar[0];
+		    h[1] = h[1] + funcVar[1];
+		    h[2] = h[2] + funcVar[2];
+		    h[3] = h[3] + funcVar[3];
+		    h[4] = h[4] + funcVar[4];
+		    h[5] = h[5] + funcVar[5];
+		    h[6] = h[6] + funcVar[6];
+		    h[7] = h[7] + funcVar[7];
 		}
-
-		for(uint i = 16; i < 80; i++){
-	    	s0 = rotateR(w[i-15],7) ^ rotateR(w[i-15],18) ^ (w[i-15] >> 3);
-	        s1 = rotateR(w[i-2],17) ^ rotateR(w[i-2 ],19) ^ (w[i-2] >> 10);
-	        w[i] = w[i-16] + s0 + w[i-7] + s1;
-    	}
-
-    	for(uint i = 16; i < 80; i++){
-    		s1 = rotateR( funcVar[4],6) ^ rotateR(funcVar[4],11) ^ rotateR(funcVar[4],25);
-	        ch = (funcVar[4] &  funcVar[5]) ^ ((~ funcVar[4]) ^ funcVar[6]);
-	        temp1 =  funcVar[7] + s1 + ch + k[i] + w[i];
-	        s0 = rotateR(funcVar[0],2) ^ rotateR(funcVar[0],13) ^ rotateR(funcVar[0],22);
-	        maj = (funcVar[0] &  funcVar[1]) ^ (funcVar[0] &  funcVar[2]) ^ (funcVar[1] &  funcVar[2]);
-	        temp2 = s0 + maj;
-    	}
-
-    	funcVar[7] = funcVar[6];
-        funcVar[6] = funcVar[5];
-        funcVar[5] = funcVar[4];
-        funcVar[4] = funcVar[3] + temp1;
-        funcVar[3] = funcVar[2];
-        funcVar[2] = funcVar[1];
-        funcVar[1] = funcVar[0];
-        funcVar[0] = temp1 + temp2;
-
-     	h[0] = h[0] + funcVar[0];
-	    h[1] = h[1] + funcVar[1];
-	    h[2] = h[2] + funcVar[2];
-	    h[3] = h[3] + funcVar[3];
-	    h[4] = h[4] + funcVar[4];
-	    h[5] = h[5] + funcVar[5];
-	    h[6] = h[6] + funcVar[6];
-	    h[7] = h[7] + funcVar[7];
 
 		return h;
 	}

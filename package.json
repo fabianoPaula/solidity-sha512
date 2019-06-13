@@ -6,7 +6,9 @@
   "scripts": {
     "contracts:build": "waffle .waffle.js",
     "contracts:test": "NODE_ENV=test mocha --recursive --require babel-register test -t 10000",
-    "contracts:build:test": "yarn contracts:build && yarn contracts:test"
+    "contracts:helloworld": "NODE_ENV=test mocha --recursive --require babel-register test -t 10000 --grep \"hello world\"",
+    "contracts:build:test": "yarn contracts:build && yarn contracts:test",
+    "contracts:hello": "yarn contracts:build && yarn contracts:helloworld"
   },
   "dependencies": {
     "babel-core": "^6.26.3",
