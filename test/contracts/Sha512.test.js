@@ -133,20 +133,24 @@ describe('Sha512 contracts test', async () => {
 
   });
 
-  describe("function encode" , async() => {
+  describe("function digest" , async() => {
 
     it("expect to be a function", async () => {
-      expect(contract.encode).to.be.an('function');
+      expect(contract.digest).to.be.an('function');
     });
 
     it("expect to hash has 64bits(512 bits)", async () => {
-      let result = await contract.encode("0x48656c6c6f20576f726c64");
-      expect(result.length).to.be.eq(128); // 128 char in hexadecimal
+      let result = await contract.digest("0x48656c6c6f20576f726c64");
+      expect(
+        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "0x").length
+      ).to.be.eq(130); // 128 char in hexadecimal + '0x'
     });
 
-    it("expect to return encode 'hello world'", async () => {
-      let result = await contract.encode("0x48656c6c6f20576f726c64");
-      expect(result).to.be.eq("0x309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f");
+    it("expect to return digest 'hello world'", async () => {
+      let result = await contract.digest("0x48656c6c6f20576f726c64");
+      expect(
+        result.reduce((prev,e) => prev + e._hex.replace('0x',''), "0x")
+      ).to.be.eq("0x309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f");
     });
 
   });

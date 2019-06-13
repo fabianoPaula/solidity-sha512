@@ -103,15 +103,25 @@ contract Sha512 {
 		return uint64(rest * 2**(64 - digits) + (data >> digits));
 	}
 
-	function encode(bytes memory data) public pure returns(bytes memory) 
+	function digest(bytes memory data) 
+		public 
+		pure 
+		returns(uint64[8] memory)
 	{
 		bytes memory blocks = preprocess(data);
-		bytes memory result;
-		// uint number_of_blocks = blocks.length/64;
 		
 		uint64[8]  memory h;
-		uint64[80]  memory k;
+		uint64[80] memory k;
 		uint64[8]  memory funcVar; // Funcional Vars
+
+		uint64 s0;
+		uint64 s1;
+		uint64 ch;
+		uint64 maj;
+		uint64 temp1;
+		uint64 temp2;
+
+		// uint number_of_blocks = blocks.length/64;
 		uint64[16] memory dataBlocks = getBlock(blocks, 0);
 		uint64[80] memory w;
 
@@ -124,16 +134,16 @@ contract Sha512 {
 		h[6] = 0x1F83D9ABFB41BD6B;
 		h[7] = 0x5BE0CD19137E2179;
 
-		k[0] = 0x428a2f98d728ae22;
-		k[1] = 0x7137449123ef65cd;
-		k[2] = 0xb5c0fbcfec4d3b2f;
-		k[3] = 0xe9b5dba58189dbbc;
-		k[4] = 0x3956c25bf348b538;
-		k[5] = 0x59f111f1b605d019;
-		k[6] = 0x923f82a4af194f9b;
-		k[7] = 0xab1c5ed5da6d8118;
-		k[8] = 0xd807aa98a3030242;
-		k[9] = 0x12835b0145706fbe;
+		k[ 0] = 0x428a2f98d728ae22;
+		k[ 1] = 0x7137449123ef65cd;
+		k[ 2] = 0xb5c0fbcfec4d3b2f;
+		k[ 3] = 0xe9b5dba58189dbbc;
+		k[ 4] = 0x3956c25bf348b538;
+		k[ 5] = 0x59f111f1b605d019;
+		k[ 6] = 0x923f82a4af194f9b;
+		k[ 7] = 0xab1c5ed5da6d8118;
+		k[ 8] = 0xd807aa98a3030242;
+		k[ 9] = 0x12835b0145706fbe;
 		k[10] = 0x243185be4ee4b28c;
 		k[11] = 0x550c7dc3d5ffb4e2;
 		k[12] = 0x72be5d74f27b896f;
@@ -218,12 +228,6 @@ contract Sha512 {
 			w[i] = dataBlocks[i];
 		}
 
-		uint64 s0;
-		uint64 s1;
-		uint64 ch;
-		uint64 maj;
-		uint64 temp1;
-		uint64 temp2;
 		for(uint i = 16; i < 80; i++){
 	    	s0 = rotateR(w[i-15],7) ^ rotateR(w[i-15],18) ^ (w[i-15] >> 3);
 	        s1 = rotateR(w[i-2],17) ^ rotateR(w[i-2 ],19) ^ (w[i-2] >> 10);
@@ -248,7 +252,7 @@ contract Sha512 {
         funcVar[1] = funcVar[0];
         funcVar[0] = temp1 + temp2;
 
-        h[0] = h[0] + funcVar[0];
+     	h[0] = h[0] + funcVar[0];
 	    h[1] = h[1] + funcVar[1];
 	    h[2] = h[2] + funcVar[2];
 	    h[3] = h[3] + funcVar[3];
@@ -257,7 +261,7 @@ contract Sha512 {
 	    h[6] = h[6] + funcVar[6];
 	    h[7] = h[7] + funcVar[7];
 
-		return result;
+		return h;
 	}
 	
 
